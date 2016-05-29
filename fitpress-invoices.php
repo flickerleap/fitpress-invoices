@@ -197,9 +197,9 @@ class FP_Invoice {
 
 	public function save_membership_profile_data( $member_data ){
 
-		$send_prorated_invoice = $_POST['send_prorated_invoice'];
+		$send_prorated_invoice = ( isset( $_POST['send_prorated_invoice'] ) ) ? $_POST['send_prorated_invoice'] : 0;
 		
-		$membership_id = $_POST['membership_id'];
+		$membership_id = ( isset( $_POST['membership_id'] ) ) ? $_POST['membership_id'] : $_GET['membership_id'];
 		$old_membership_id = $member_data['old_membership_id'];
 		$member_id = $member_data['member_id'];
 

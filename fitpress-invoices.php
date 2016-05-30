@@ -92,7 +92,7 @@ class FP_Invoice {
 	 * Register core post types.
 	 */
 	public static function register_post_types() {
-		if ( post_type_exists('membership') ) {
+		if ( post_type_exists('fp_invoice') ) {
 			return;
 		}
 
@@ -368,7 +368,7 @@ class FP_Invoice {
 	public static function woocommerce_inactive_notice() {
 		if ( current_user_can( 'activate_plugins' ) ) :?>
 			<div id="message" class="error">
-				<p><?php printf( __( '%sFitPress is inactive%s. The FitPress plugin must be active for FitPress to work. Please install & activate FitPress.', 'fitpress-invoices' ), '<strong>', '</strong>' ); ?></p>
+				<p><?php printf( __( '%sFitPress is inactive%s. The FitPress plugin must be active for FitPress Invoices to work. Please install & activate FitPress.', 'fitpress-invoices' ), '<strong>', '</strong>' ); ?></p>
 			</div>
 		<?php endif;
 	}

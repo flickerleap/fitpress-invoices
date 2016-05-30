@@ -51,7 +51,7 @@ class FP_Invoice {
 			wp_schedule_event( $start, 'daily', 'send_monthly_invoices' );
 		endif;
 
-		add_action('send_monthly_invoices', array( $this, 'maybe_send_monthly_invoices'));
+		add_action('send_monthly_invoices', __CLASS__ . '::maybe_send_monthly_invoices' );
 
 	}
 

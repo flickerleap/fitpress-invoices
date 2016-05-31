@@ -43,7 +43,7 @@ class FP_Invoice {
 		add_action( 'fitpress_after_membership_fields', array( $this, 'add_membership_fields' ) );
 		add_filter( 'fitpress_before_membership_save', array( $this, 'save_membership_data' ) );
 
-		add_action( 'fitpress_after_membership_profile_fields', array( $this, 'add_membership_profile_fields' ) );
+		add_action( 'fitpress_after_membership_profile_fields', array( $this, 'add_membership_profile_fields' ), 10, 2 );
 		add_action( 'fitpress_before_membership_profile_save', array( $this, 'save_membership_profile_data' ) );
 
 		if( !wp_get_schedule('send_monthly_invoices') ):
@@ -76,9 +76,12 @@ class FP_Invoice {
 
 			    foreach ( $members as $member_id ){
 
-			        $membership_id = get_user_meta( $member_id, 'fitpress_membership_id', true );
+			        $next_invoice_date = get_user_meta( $member_id, 'fitpress_next_invoice_date', true );
+			        if( !$next_invoice_date || date( 'j F Y' ) == $next_invoice_date ):
+				        $membership_id = get_user_meta( $member_id, 'fitpress_membership_id', true );
 
-			    	FP_Invoice::create_invoice( $member_id, $membership_id );
+				    	FP_Invoice::create_invoice( $member_id, $membership_id );
+				    endif;
 
 			    }
 
@@ -163,6 +166,16 @@ class FP_Invoice {
             <label for="price">Price</label>
             R <input name="price" type="text" value="<?php echo isset( $membership_data['price'] ) ? $membership_data['price'] : ''; ?>">
         </p>
+        <p>
+            <label for="term">Term</label>
+            <select name="term">
+            	<option value="Once Off" <?php selected( isset( $membership_data['term'] ) ? $membership_data['term'] : '', 'Once Off');?>>Once Off</option>
+            	<option value="+1 month" <?php selected( isset( $membership_data['term'] ) ? $membership_data['term'] : '', '+1 month');?>>Monthly</option>
+            	<option value="+3 months" <?php selected( isset( $membership_data['term'] ) ? $membership_data['term'] : '', '+3 months');?>>Quarterly</option>
+            	<option value="+6 months" <?php selected( isset( $membership_data['term'] ) ? $membership_data['term'] : '', '+6 months');?>>Bi-annually</option>
+            	<option value="+1 year" <?php selected( isset( $membership_data['term'] ) ? $membership_data['term'] : '', '+1 year');?>>Annualy</option>
+            </select>
+        </p>
    		<?php  
 
 	}
@@ -173,23 +186,52 @@ class FP_Invoice {
 	        $membership_data['price'] = $_POST["price"];
 	    }
 
+	    if(isset($_POST["term"])){
+	        $membership_data['term'] = $_POST["term"];
+	    }
+
 	    return $membership_data;
 
 	}
 
-	public function add_membership_profile_fields(){
+	public function add_membership_profile_fields( $member_id, $membership_id ){
 
 		?>
 
 		<tr>
 		<th><label for="credits">Send Prorated Invoice Now?</label></th>
-
 		<td>
 			<input type="hidden" name="send_prorated_invoice" id="send_prorated_invoice"  class="regular-text" value="0" />
 			<input type="checkbox" name="send_prorated_invoice" id="send_prorated_invoice"  class="regular-check" value="1" /><br />
 			<span class="description">Only applies for upgrades and new memberships</span>
 		</td>
 		</tr>
+
+		<tr>
+		<th><label for="credits">Do not invoice?</label></th>
+		<td>
+			<input type="hidden" name="do_not_invoice" id="do_not_invoice"  class="regular-text" value="0" />
+			<input type="checkbox" name="do_not_invoice" id="do_not_invoice"  class="regular-check" value="1" /><br />
+			<span class="description">Will not send invoice</span>
+		</td>
+		</tr>
+
+		<?php if( $membership_id && $membership_id =! '0' ):?>
+		<tr>
+		<th>Next Invoice Date</th>
+		<td>
+			<?php $next_invoice_date = get_user_meta( $member_id, 'fitpress_next_invoice_date', true );?>
+			<?php
+			if( $next_invoice_date && $next_invoice_date == 'Once Off' )
+				echo 'Once Off';
+			elseif($next_invoice_date)
+				echo date( 'j F Y', $next_invoice_date );
+			else
+				echo date( 'F Y', strtotime( '+1 month' ) );
+			?>
+		</td>
+		</tr>
+		<?php endif;?>
 
 		<?php
 
@@ -198,22 +240,26 @@ class FP_Invoice {
 	public function save_membership_profile_data( $member_data ){
 
 		$send_prorated_invoice = ( isset( $_POST['send_prorated_invoice'] ) ) ? $_POST['send_prorated_invoice'] : 0;
+		$do_not_invoice = ( isset( $_POST['do_not_invoice'] ) ) ? $_POST['do_not_invoice'] : 0;
 		
 		$membership_id = ( isset( $_POST['membership_id'] ) ) ? $_POST['membership_id'] : $_GET['membership_id'];
 		$old_membership_id = $member_data['old_membership_id'];
 		$member_id = $member_data['member_id'];
 
-		if( $old_membership_id && $old_membership_id != $membership_id && $membership_id != '0' && $send_prorated_invoice ):
+		if( $old_membership_id && $old_membership_id == $membership_id || $do_not_invoice )
+			return;
+
+		if( $old_membership_id && $old_membership_id != $membership_id && $membership_id != '0' && $send_prorated_invoice && date( 'j' ) < 25 ):
 
 			FP_Invoice::create_invoice( $member_id, $membership_id, $old_membership_id, true );
 
-		elseif( $membership_id != '0' && $send_prorated_invoice ):
+		elseif( $membership_id != '0' && $send_prorated_invoice && date( 'j' ) < 25 ):
 
 			FP_Invoice::create_invoice( $member_id, $membership_id, null, true );
 
 		elseif( $membership_id != '0' && date( 'j' ) >= 25 ):
 
-			FP_Invoice::create_invoice( $member_id, $membership_id, null );
+			FP_Invoice::create_invoice( $member_id, $membership_id );
 
 		endif;
 
@@ -229,6 +275,20 @@ class FP_Invoice {
 
 			$old_price = $memberships[$old_membership_id]['price'];
 			$new_price = $memberships[$membership_id]['price'];
+
+			if( !isset( $memberships[$membership_id]['term'] ) || $memberships[$membership_id]['term'] == '+1 Month' ):
+
+				update_user_meta( $member_id, 'fitpress_next_invoice_date', strtotime('25th of this month') );
+
+			elseif( $memberships[$membership_id]['term'] == 'Once Off' ):
+
+				update_user_meta( $member_id, 'fitpress_next_invoice_date', $memberships[$membership_id]['term'] );
+
+			else:
+
+				update_user_meta( $member_id, 'fitpress_next_invoice_date', strtotime( '25 ' . date( 'F Y', strtotime( $memberships[$membership_id]['term'] ) ) ) );
+
+			endif;
 
 			if( $new_price > $old_price ):
 
@@ -272,6 +332,20 @@ class FP_Invoice {
 
 			$memberships[$membership_id]['price'] = self::prorate_price( $memberships[$membership_id]['price'] );
 
+			if( !isset( $memberships[$membership_id]['term'] ) || $memberships[$membership_id]['term'] == '+1 Month' ):
+
+				update_user_meta( $member_id, 'fitpress_next_invoice_date', strtotime('25th of this month') );
+
+			elseif( $memberships[$membership_id]['term'] == 'Once Off' ):
+
+				update_user_meta( $member_id, 'fitpress_next_invoice_date', $memberships[$membership_id]['term'] );
+
+			else:
+
+				update_user_meta( $member_id, 'fitpress_next_invoice_date', strtotime( '25 ' . date( 'F Y', strtotime( $memberships[$membership_id]['term'] ) ) ) );
+
+			endif;
+
 			$line_items[] = $memberships[$membership_id];
 
 			$invoice_number = get_option( 'fitpress_invoice_number', 0 );
@@ -301,6 +375,20 @@ class FP_Invoice {
 		else:
 
 			$memberships = FP_Membership::get_membership( array( $membership_id ) );
+
+			if( !isset( $memberships[$membership_id]['term'] ) || $memberships[$membership_id]['term'] == '+1 Month' ):
+
+				update_user_meta( $member_id, 'fitpress_next_invoice_date', strtotime( '25 ' . date( 'F Y', strtotime( '+1 Month' ) ) ) );
+
+			elseif( $memberships[$membership_id]['term'] == 'Once Off' ):
+
+				update_user_meta( $member_id, 'fitpress_next_invoice_date', $memberships[$membership_id]['term'] );
+
+			else:
+
+				update_user_meta( $member_id, 'fitpress_next_invoice_date', strtotime( '25 ' . date( 'F Y', strtotime( $memberships[$membership_id]['term'] ) ) ) );
+
+			endif;
 
 			$line_items[] = $memberships[$membership_id];
 
@@ -337,7 +425,6 @@ class FP_Invoice {
 	public static function send_invoice( $invoice_id, $prorate = false ){
 
 		$invoice = get_post( $invoice_id );
-
 		$line_items = get_post_meta( $invoice_id, 'fp_invoice_line_items', true );
 
 		$invoice_data = array(
@@ -374,8 +461,6 @@ class FP_Invoice {
 	}
 
 }
-
-
 
 /**
  * Extension main function

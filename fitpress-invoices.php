@@ -20,12 +20,12 @@ endif;
 function is_fitpress_active(){
 
 	/**
-	 * Check if WooCommerce is active, and if it isn't, disable Subscriptions.
+	 * Check if FitPress is active, and if it isn't, disable Invoices.
 	 *
 	 * @since 1.0
 	 */
 	if ( !is_plugin_active( 'fitpress/fitpress.php' ) ) {
-		add_action( 'admin_notices', 'FP_Invoice::woocommerce_inactive_notice' );
+		add_action( 'admin_notices', 'FP_Invoice::fitpress_inactive_notice' );
 		deactivate_plugins( plugin_basename( __FILE__ ) );
 	}
 
@@ -51,7 +51,8 @@ class FP_Invoice {
 			wp_schedule_event( $start, 'daily', 'send_monthly_invoices' );
 		endif;
 
-		add_action('send_monthly_invoices', __CLASS__ . '::maybe_send_monthly_invoices' );
+		add_action( 'send_monthly_invoices' , __CLASS__ . '::maybe_send_monthly_invoices' );
+        add_action( 'init' , __CLASS__ . '::maybe_force_monthly_invoices' );
 
 	}
 
@@ -74,22 +75,36 @@ class FP_Invoice {
 			// Check for results
 			if (!empty($members)) {
 
+                $next_day = strtotime( 'tomorrow', current_time( 'timestamp' ) );
+
 			    foreach ( $members as $member_id ){
 
 			        $next_invoice_date = get_user_meta( $member_id, 'fitpress_next_invoice_date', true );
-			        if( !$next_invoice_date || date( 'j F Y' ) == $next_invoice_date ):
+			        if( !$next_invoice_date || $next_day >= strtotime( $next_invoice_date ) ):
+
 				        $membership_id = get_user_meta( $member_id, 'fitpress_membership_id', true );
 
 				    	FP_Invoice::create_invoice( $member_id, $membership_id );
+
 				    endif;
 
 			    }
+
+                    exit;
 
 			}
 
 		endif;
 
 	}
+
+    public static function maybe_force_monthly_invoices( ) {
+
+        if( isset( $_GET[ 'force_end_emails' ] ) ){
+            self::maybe_send_monthly_invoices( true );
+        }
+
+    }
 
 	/**
 	 * Register core post types.
@@ -132,7 +147,8 @@ class FP_Invoice {
 				'rewrite'             => false,
 				'query_var'           => false,
 				'has_archive'         => false,
-				'show_in_nav_menus'   => true
+				'show_in_nav_menus'   => true,
+				'show_in_menu'		  => 'fitpress',
 			)
 		);
 	}
@@ -176,7 +192,7 @@ class FP_Invoice {
             	<option value="+1 year" <?php selected( isset( $membership_data['term'] ) ? $membership_data['term'] : '', '+1 year');?>>Annualy</option>
             </select>
         </p>
-   		<?php  
+   		<?php
 
 	}
 
@@ -241,7 +257,7 @@ class FP_Invoice {
 
 		$send_prorated_invoice = ( isset( $_POST['send_prorated_invoice'] ) ) ? $_POST['send_prorated_invoice'] : 0;
 		$do_not_invoice = ( isset( $_POST['do_not_invoice'] ) ) ? $_POST['do_not_invoice'] : 0;
-		
+
 		$membership_id = ( isset( $_POST['membership_id'] ) ) ? $_POST['membership_id'] : $_GET['membership_id'];
 		$old_membership_id = $member_data['old_membership_id'];
 		$member_id = $member_data['member_id'];
@@ -452,7 +468,7 @@ class FP_Invoice {
 
 	}
 
-	public static function woocommerce_inactive_notice() {
+	public static function fitpress_inactive_notice() {
 		if ( current_user_can( 'activate_plugins' ) ) :?>
 			<div id="message" class="error">
 				<p><?php printf( __( '%sFitPress is inactive%s. The FitPress plugin must be active for FitPress Invoices to work. Please install & activate FitPress.', 'fitpress-invoices' ), '<strong>', '</strong>' ); ?></p>

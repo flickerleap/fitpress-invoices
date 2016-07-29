@@ -40,6 +40,11 @@ class FP_Invoice {
 		add_action( 'init', array( $this, 'register_post_types' ), 5 );
 		add_action( 'init', array( __CLASS__, 'register_post_status' ), 9 );
 
+        if ( is_admin() ) {
+            add_action( 'load-post.php',     array( $this, 'init_metabox' ) );
+            add_action( 'load-post-new.php', array( $this, 'init_metabox' ) );
+        }
+
 		add_action( 'fitpress_after_membership_fields', array( $this, 'add_membership_fields' ) );
 		add_filter( 'fitpress_before_membership_save', array( $this, 'save_membership_data' ) );
 
@@ -149,6 +154,7 @@ class FP_Invoice {
 				'has_archive'         => false,
 				'show_in_nav_menus'   => true,
 				'show_in_menu'		  => 'fitpress',
+                'supports'            => false
 			)
 		);
 	}
@@ -163,7 +169,7 @@ class FP_Invoice {
 			'exclude_from_search'       => false,
 			'show_in_admin_all_list'    => true,
 			'show_in_admin_status_list' => true,
-			'label_count'               => _n_noop( 'Pending payment <span class="count">(%s)</span>', 'Pending payment <span class="count">(%s)</span>', 'fitpress-invoice' )
+			'label_count'               => _n_noop( 'Pending Payment <span class="count">(%s)</span>', 'Pending Payment <span class="count">(%s)</span>', 'fitpress-invoice' )
 		) );
 		register_post_status( 'fp-paid', array(
 			'label'                     => _x( 'Paid', 'Invoice status', 'fitpress-invoice' ),
@@ -171,9 +177,155 @@ class FP_Invoice {
 			'exclude_from_search'       => false,
 			'show_in_admin_all_list'    => true,
 			'show_in_admin_status_list' => true,
-			'label_count'               => _n_noop( 'Paid <span class="count">(%s)</span>', 'Processing <span class="count">(%s)</span>', 'fitpress-invoice' )
+			'label_count'               => _n_noop( 'Paid <span class="count">(%s)</span>', 'Paid <span class="count">(%s)</span>', 'fitpress-invoice' )
 		) );
-	}
+	}/**
+     * Meta box initialization.
+     */
+    public function init_metabox() {
+        add_action( 'add_meta_boxes', array( $this, 'add_metabox'  )        );
+        add_action( 'save_post',      array( $this, 'save_metabox' ), 10, 2 );
+    }
+
+    /**
+     * Adds the meta box.
+     */
+    public function add_metabox() {
+        add_meta_box(
+            'invoice-data',
+            __( 'Invoice Data', 'fitpress' ),
+            array( $this, 'render_metabox' ),
+            'fp_invoice',
+            'advanced',
+            'default'
+        );
+
+    }
+
+    /**
+     * Renders the meta box.
+     */
+    public function render_metabox( $post ) {
+        // Add nonce for security and authentication.
+        wp_nonce_field( FP_PLUGIN_FILE, 'membership_nonce' );
+
+        $invoice_id = $post->ID;
+        $line_items = get_post_meta( $invoice_id, 'fp_invoice_line_items', true );
+
+        $invoice = array(
+            'number' => get_post_meta( $invoice_id, 'fp_invoice_number', true ),
+            'date' => get_post_meta( $invoice_id, 'fp_invoice_date', true ),
+            'due_date' => get_post_meta( $invoice_id, 'fp_invoice_due_date',  true ),
+        );
+        $member_id = get_post_meta( $invoice_id, 'fp_user_id', true );
+        $member = get_user_by('id', $member_id);
+
+        ?>
+
+        <p>
+            <strong><?php echo $member->display_name;?></strong><br />
+            <strong>Invoice Number:</strong> <?php echo $invoice['number']; ?><br />
+            <strong>Date:</strong> <?php echo $invoice['date']; ?><br />
+            <strong>Due Date:</strong><?php echo $invoice['due_date']; ?>
+        </p>
+
+        <table width="600">
+
+            <thead>
+
+                <tr>
+                    <th style="width: 75%">Description</th>
+                    <th>Price</th>
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+            <?php $total = 0;?>
+
+            <?php foreach( $line_items as $line_item ):?>
+
+                <tr>
+
+                    <td>
+                        <?php echo $line_item['name'];?>
+                    </td>
+                    <td style="text-align: right;">
+                        R <?php echo number_format( $line_item['price'], 2, '.', ' ');?>
+                        <?php $total += $line_item['price'];?>
+                    </td>
+                </tr>
+
+            <?php endforeach;?>
+
+            </tbody>
+
+            <tfooter>
+
+                <tr>
+                    <th style="text-align: right;padding: 5px;">VAT</th>
+                    <th style="text-align: right;padding: 5px;">
+                        R <?php
+                        $VAT = ( ( $total / (1 + 14 / 100) ) - $total ) * -1;
+                        echo number_format( ROUND($VAT, 2), 2, '.', ' ');
+                        ?>
+                    </th>
+                </tr>
+
+                <tr>
+                    <th style="text-align: right;padding: 5px;">Total (incl. VAT)</th>
+                    <th style="text-align: right;padding: 5px;">R <?php echo number_format( $total, 2, '.', ' ');?></th>
+                </tr>
+
+            </tfooter>
+
+        </table>
+
+        <?php
+
+    }
+
+    /**
+     * Handles saving the meta box.
+     *
+     * @param int     $post_id Post ID.
+     * @param WP_Post $post    Post object.
+     * @return null
+     */
+    public function save_metabox( $post_id, $post ) {
+        // Add nonce for security and authentication.
+        $nonce_name   = isset( $_POST['membership_nonce'] ) ? $_POST['membership_nonce'] : '';
+        $nonce_action = FP_PLUGIN_FILE;
+
+        // Check if nonce is set.
+        if ( ! isset( $nonce_name ) ) {
+            return;
+        }
+
+        // Check if nonce is valid.
+        if ( ! wp_verify_nonce( $nonce_name, $nonce_action ) ) {
+            return;
+        }
+
+        // Check if user has permissions to save data.
+        if ( ! current_user_can( 'edit_post', $post_id ) ) {
+            return;
+        }
+
+        // Check if not an autosave.
+        if ( wp_is_post_autosave( $post_id ) ) {
+            return;
+        }
+
+        // Check if not a revision.
+        if ( wp_is_post_revision( $post_id ) ) {
+            return;
+        }
+
+        return;
+
+    }
 
 	public function add_membership_fields( $membership_data ){
 

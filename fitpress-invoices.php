@@ -66,6 +66,7 @@ class FP_Invoice {
 
     public function includes(){
 
+        include_once( 'includes/fp-invoices-utilities.php' );
         include_once( 'includes/class-fp-invoices-post-type.php' );
         include_once( 'includes/class-fp-invoices-admin.php' );
 
@@ -106,17 +107,18 @@ class FP_Invoice {
 			    foreach ( $members as $member_id ){
 
 			        $next_invoice_date = get_user_meta( $member_id, 'fitpress_next_invoice_date', true );
-			        if( !$next_invoice_date || $next_day >= strtotime( $next_invoice_date ) ):
+
+			        if( !$next_invoice_date || $next_invoice_date != 'Once Off' && $next_day >= $next_invoice_date ):
 
 				        $membership_id = get_user_meta( $member_id, 'fitpress_membership_id', true );
 
-				    	FP_Invoice::create_invoice( $member_id, $membership_id );
+                        error_log('$nextday: ' . $next_day . ' & $next_invoice_date: ' . $next_invoice_date );
+
+				    	//FP_Invoice::create_invoice( $member_id, $membership_id );
 
 				    endif;
 
 			    }
-
-                    exit;
 
 			}
 

@@ -130,7 +130,7 @@ class FP_Invoice {
 
 		if( $old_membership_id && $prorate ):
 
-			$memberships = WC_Membership::get_membership( array( $membership_id, $old_membership_id ) );
+			$memberships = FP_Membership::get_membership( array( $membership_id, $old_membership_id ) );
 
 			$old_price = $memberships[$old_membership_id]['price'];
 			$new_price = $memberships[$membership_id]['price'];

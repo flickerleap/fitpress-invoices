@@ -79,8 +79,19 @@ class FP_Invoice {
             wp_schedule_event( $start, 'daily', 'send_monthly_invoices' );
         endif;
 
-        add_action( 'send_monthly_invoices' , __CLASS__ . '::maybe_send_monthly_invoices' );
+        add_action( 'send_monthly_invoices' , array( $this, 'send_monthly_invoices' ) );
+        add_action( 'init' , array( $this, 'send_monthly_invoices' ) );
 
+    }
+
+    public function is_synchronise_date(){
+    	$fp_settings = get_option( 'fitpress_settings' );
+    	return boolval( $fp_settings['synchronise_renewal'] );
+    }
+
+    public function get_synchronise_date(){
+    	$fp_settings = get_option( 'fitpress_settings' );
+    	return $fp_settings['billing_date'];
     }
 
 	/**
@@ -91,9 +102,9 @@ class FP_Invoice {
 	* @version 1.0
 	* @since 0.1
 	*/
-	public static function maybe_send_monthly_invoices( $force = false ) {
+	public function send_monthly_invoices( ) {
 
-		if( date('j') == 25 || $force ):
+		if( $this->is_synchronise_date() && date('j') == $this->get_synchronise_date() ):
 
 			$members = FP_Membership::get_members( );
 
@@ -119,6 +130,10 @@ class FP_Invoice {
 			    }
 
 			}
+
+		else if( ! $this->is_synchronise_date() ):
+
+			// TODO: get members that renew today.
 
 		endif;
 

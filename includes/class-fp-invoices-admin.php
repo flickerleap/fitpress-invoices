@@ -199,7 +199,7 @@ class FP_Invoices_Admin {
 
 		add_settings_field(
 			'synchronise_renewal',
-			'Synchronise Renewal Data',
+			'Synchronise Renewal Date',
 			array( $this, 'synchronise_renewal_callback_function' ),
 			'fp_settings',
 			'invoice_settings'

@@ -112,9 +112,7 @@ class FP_Invoice {
 
 				        $membership_id = get_user_meta( $member_id, 'fitpress_membership_id', true );
 
-                        error_log('$nextday: ' . $next_day . ' & $next_invoice_date: ' . $next_invoice_date );
-
-				    	//FP_Invoice::create_invoice( $member_id, $membership_id );
+				    	FP_Invoice::create_invoice( $member_id, $membership_id );
 
 				    endif;
 

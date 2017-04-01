@@ -62,18 +62,19 @@ class FP_Invoices_Admin {
 		</td>
 		</tr>
 
-		<?php if( $membership_id && $membership_id =! '0' ):?>
+		<?php if ( $membership_id && $membership_id =! '0' ):?>
 		<tr>
 		<th>Next Invoice Date</th>
 		<td>
 			<?php $next_invoice_date = get_user_meta( $member_id, 'fitpress_next_invoice_date', true );?>
 			<?php
-			if( $next_invoice_date && $next_invoice_date == 'Once Off' )
+			if ( $next_invoice_date && 'Once Off' == $next_invoice_date ) :
 				echo 'Once Off';
-			elseif($next_invoice_date)
+			elseif ( $next_invoice_date ) :
 				echo date( 'j F Y', $next_invoice_date );
-			else
-				echo date( 'F Y', strtotime( '+1 month' ) );
+			else :
+				echo 'Not set.';
+			endif;
 			?>
 		</td>
 		</tr>
@@ -88,28 +89,33 @@ class FP_Invoices_Admin {
 		$send_prorated_invoice = ( isset( $_POST['send_prorated_invoice'] ) ) ? $_POST['send_prorated_invoice'] : 0;
 		$do_not_invoice = ( isset( $_POST['do_not_invoice'] ) ) ? $_POST['do_not_invoice'] : 0;
 
-		$membership_id = ( isset( $_POST['membership_id'] ) ) ? $_POST['membership_id'] : $_GET['membership_id'];
-		$old_membership_id = $member_data['old_membership_id'];
+		$membership_id = ( isset( $_POST['membership_id'] ) ) ? $_POST['membership_id'] : 0;
+		$membership_status = ( isset( $_POST['membership_status'] ) ) ? $_POST['membership_status'] : 'on-hold';
+		$old_membership_id = ( $member_data['old_membership_id'] ) ? $member_data['old_membership_id'] : 0;
 		$member_id = $member_data['member_id'];
 
-		if( $old_membership_id && $old_membership_id == $membership_id || $do_not_invoice )
+		if ( $old_membership_id == $membership_id || 0 === intval( $membership_id ) || $membership_status != 'active' ) :
 			return;
-
-		if( $old_membership_id && $old_membership_id != $membership_id && $membership_id != '0' && $send_prorated_invoice && date( 'j' ) < 25 ):
-
-			FP_Invoice::create_invoice( $member_id, $membership_id, $old_membership_id, true );
-
-		elseif( $membership_id != '0' && $send_prorated_invoice && date( 'j' ) < 25 ):
-
-			FP_Invoice::create_invoice( $member_id, $membership_id, null, true );
-
-		elseif( $membership_id != '0' && date( 'j' ) >= 25 ):
-
-			FP_Invoice::create_invoice( $member_id, $membership_id );
-
 		endif;
 
-		// update_user_meta( $user_id, 'fitpress_credits', $credits, $old_credits );
+		$invoice = new FP_Invoice_Run();
+
+		if ( $do_not_invoice ) :
+			$this->set_membership_date( $member_id );
+			$membership = FP_Membership::get_membership( $membership_id );
+			$invoice->set_next_invoice_date( $member_id, $membership[$membership_id]['term'] );
+			return;
+		endif;
+
+		$invoice->create_invoice( $member_id, $membership_id, $old_membership_id, $send_prorated_invoice );
+
+		$this->set_membership_date( $member_id );
+
+	}
+
+	public function set_membership_date( $member_id ) {
+
+		update_user_meta( $member_id, 'fitpress_membership_date', date( 'j F Y' ) );
 
 	}
 

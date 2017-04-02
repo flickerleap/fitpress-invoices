@@ -70,10 +70,21 @@ class FP_Invoice {
 		include_once( 'includes/class-fp-invoices-post-type.php' );
 		include_once( 'includes/class-fp-invoices-admin.php' );
 		include_once( 'includes/class-fp-invoice-run.php' );
+        include_once( 'includes/class-fp-invoice-payment.php' );
 
 	}
 
 	public function init_hooks(){
+
+		add_filter( 'fp_membership_signup_button', array( $this, 'update_signup_links' ) );
+
+	}
+
+	public function update_signup_links( $signup ){
+
+		$signup['text'] = 'Sign Up';
+
+		return $signup;
 
 	}
 

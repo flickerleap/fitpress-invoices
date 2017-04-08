@@ -144,7 +144,7 @@ class FP_Invoices_Admin {
 
 			else:
 
-				echo '<a href="<?php echo get_edit_user_link( $member->ID ); ?>">' . $member->display_name . '</a>';
+				echo '<a href="' . get_edit_user_link( $member->ID ) . '">' . $member->display_name . '</a>';
 
 			endif;
 

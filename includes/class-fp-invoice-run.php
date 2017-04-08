@@ -35,7 +35,9 @@ class FP_Invoice_Run {
 			wp_schedule_event( $start, 'daily', 'send_monthly_invoices' );
 		endif;
 
-		add_action( 'send_monthly_invoices' , array( $this, 'maybe_send_monthly_invoices' ) );
+		add_action( 'send_monthly_invoices', array( $this, 'maybe_send_monthly_invoices' ) );
+
+		add_action( 'fitpress_member_signup', array( $this, 'create_invoice' ), 10, 2 );
 
 	}
 

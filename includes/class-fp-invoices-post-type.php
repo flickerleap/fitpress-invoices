@@ -85,6 +85,21 @@ class FP_Invoices_Post_Type {
                 'supports'            => false
             )
         );
+
+        register_post_type( 'fp_payment',
+            array(
+                'public'              => false,
+                'show_ui'             => false,
+                'publicly_queryable'  => false,
+                'exclude_from_search' => false,
+                'hierarchical'        => false,
+                'rewrite'             => false,
+                'query_var'           => false,
+                'has_archive'         => false,
+                'show_in_nav_menus'   => false,
+                'supports'            => false
+            )
+        );
     }
 
     /**
@@ -94,6 +109,7 @@ class FP_Invoices_Post_Type {
         register_post_status( 'fp-unpaid', array(
             'label'                     => _x( 'Unpaid', 'Invoice status', 'fitpress-invoice' ),
             'public'                    => false,
+            'protected'                 => true,
             'exclude_from_search'       => false,
             'show_in_admin_all_list'    => true,
             'show_in_admin_status_list' => true,
@@ -103,6 +119,7 @@ class FP_Invoices_Post_Type {
             'label'                     => _x( 'Paid', 'Invoice status', 'fitpress-invoice' ),
             'public'                    => false,
             'exclude_from_search'       => false,
+            'protected'                 => true,
             'show_in_admin_all_list'    => true,
             'show_in_admin_status_list' => true,
             'label_count'               => _n_noop( 'Paid <span class="count">(%s)</span>', 'Paid <span class="count">(%s)</span>', 'fitpress-invoice' )

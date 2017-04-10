@@ -70,8 +70,9 @@ class FP_Invoices_Admin {
 			<?php
 			if ( $next_invoice_date && 'Once Off' == $next_invoice_date ) :
 				echo 'Once Off';
-			elseif ( $next_invoice_date ) :
-				echo date( 'j F Y', $next_invoice_date );
+			elseif ( $next_invoice_date ) :?>
+				<input type="text" name="next_invoice_date" id="next_invoice_date" class="regular-text" value="<?php echo date( 'j F Y', $next_invoice_date );?>" />
+				<?php
 			else :
 				echo 'Not set.';
 			endif;
@@ -93,6 +94,9 @@ class FP_Invoices_Admin {
 		$membership_status = ( isset( $_POST['membership_status'] ) ) ? $_POST['membership_status'] : 'on-hold';
 		$old_membership_id = ( $member_data['old_membership_id'] ) ? $member_data['old_membership_id'] : 0;
 		$member_id = $member_data['member_id'];
+		$next_invoice_date = ( isset( $_POST['next_invoice_date'] ) ) ? $_POST['next_invoice_date'] : date( 'j F Y' );
+
+		update_user_meta( $member_id, 'fitpress_next_invoice_date', strtotime( $next_invoice_date ) );
 
 		if ( $old_membership_id == $membership_id || 0 === intval( $membership_id ) || $membership_status != 'active' ) :
 			return;

@@ -70,7 +70,7 @@ class FP_Invoice {
 		include_once( 'includes/class-fp-invoices-post-type.php' );
 		include_once( 'includes/class-fp-invoices-admin.php' );
 		include_once( 'includes/class-fp-invoice-run.php' );
-        include_once( 'includes/class-fp-invoice-payment.php' );
+		include_once( 'includes/class-fp-invoice-payment.php' );
 
 	}
 

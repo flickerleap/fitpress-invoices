@@ -39,9 +39,33 @@ class FP_Invoice_Run {
 
 		add_action( 'fitpress_member_signup', array( $this, 'create_invoice' ), 10, 2 );
 
+		add_filter( 'fitpress_credit_reset_date', array( $this, 'sync_reset_credit' ) );
+
 	}
 
-	public function is_synchronise_date(){
+	/**
+	 * Returns false if the credit sync should be on invoice.
+	 *
+	 * @param  Int $date The date the sync will run on.
+	 * @return Mixed     Returns the day if synchronised or false if not.
+	 */
+	public function sync_reset_credit( $date ) {
+
+		if ( ! $this->is_synchronise_date() ) :
+			return false;
+		endif;
+
+		return $date;
+
+
+	}
+
+	/**
+	 * Returns if the system must sync invoices or not.
+	 *
+	 * @return Bool Returns true or fale.
+	 */
+	public function is_synchronise_date() {
 		if ( empty( $this->is_synchronised ) ) :
 			$fp_settings = get_option( 'fitpress_settings' );
 			$this->is_synchronised = isset( $fp_settings['synchronise_renewal'] ) && boolval( $fp_settings['synchronise_renewal'] );
@@ -67,7 +91,7 @@ class FP_Invoice_Run {
 	*/
 	public function maybe_send_monthly_invoices( ) {
 
-		$members = FP_Membership::get_renewals( );
+		$members = $this->get_renewals( );
 
 		$memberships = FP_Membership::get_memberships( );
 
@@ -85,6 +109,38 @@ class FP_Invoice_Run {
 			endforeach;
 
 		endif;
+
+	}
+
+
+	/**
+	 * Get a list of active or non-active members. Can also search.
+	 *
+	 * @param Mixed $fields Fields to return. Defaults to ID.
+	 * @param Bool  $none_members Set to true to return none members.
+	 * @param Mixed $search Set to string to search for a specific member.
+	 */
+	public static function get_renewals( ) {
+
+		$args = array(
+			'meta_query' => array(
+				array(
+					'key' => 'fitpress_membership_status',
+					'value' => 'active',
+					'compare' => '=',
+				),
+				array(
+					'key' => 'fitpress_next_invoice_date',
+					'value' => strtotime( date( 'j F Y' ) ),
+					'compare' => '=',
+				),
+			),
+			'fields' => $fields,
+		);
+
+		$member_query = new WP_User_Query( $args );
+
+		return $member_query->get_results();
 
 	}
 

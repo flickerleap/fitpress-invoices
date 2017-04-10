@@ -25,8 +25,29 @@ class FP_Payment {
 	/**
 	 * Hook in methods.
 	 */
-    public function __construct(){
+	public function __construct(){
 
+		add_action( 'template_redirect', array( $this, 'check_payment' ) );
+
+	}
+
+	public function check_payment() {
+		global $wp;
+
+		$member_id = get_current_user_id();
+
+		$membership_status = new FP_Membership_Status( $member_id );
+		$status = $membership_status->get_status();
+
+		$membership = FP_Membership::get_user_membership( $member_id );
+
+		if ( 'active' != $membership_status && 'Once Off' != $membership['term'] && ! isset( $wp->query_vars['checkout'] ) ) :
+			fp_add_flash_message( __( 'Please, make payment to activate your membership again.', 'fitpress' ), 'error' );
+			wp_redirect( fp_checkout_url() );
+			exit;
+		elseif ( 'active' == $membership_status && ! apply_filters( 'fitpress_payment_token', true ) ) :
+			fp_add_flash_message( __( 'Please, <a href="' . fp_checkout_url() . '">add your payment method</a>. You will not be billed now.', 'fitpress' ), 'error' );
+		endif;
 	}
 
 	protected function get_defaults() {
@@ -111,6 +132,7 @@ class FP_Payment {
 			case 'complete':
 				$this->update_invoice( $invoice_id );
 				$this->activate_membership( $payment_data['member_id'] );
+				$this->update_credits( $payment_data['member_id'] );
 				break;
 			case 'failed':
 			case 'pending':
@@ -120,6 +142,16 @@ class FP_Payment {
 				$this->cancel_membership( $payment_data['member_id'] );
 				break;
 		endswitch;
+
+	}
+
+	public function update_credits( $member_id ) {
+
+		$old_credits = get_user_meta( $member_id, 'fitpress_credits', true );
+
+		$membership = FP_Membership::get_user_membership( $member_id );
+
+		update_user_meta( $member_id, 'fitpress_credits', $credits['credits'], $old_credits);
 
 	}
 
@@ -161,12 +193,4 @@ class FP_Payment {
 
 }
 
-/**
- * Extension main function
- */
-function __fp_payment_main() {
-    new FP_Payment();
-}
-
-// Initialize plugin when plugins are loaded
-add_action( 'plugins_loaded', '__fp_payment_main' );
+new FP_Payment();

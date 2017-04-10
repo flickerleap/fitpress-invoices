@@ -308,7 +308,9 @@ class FP_Invoice_Run {
 
 			if ( ! $membership_date ) :
 				$membership_date = date( 'j F Y' );
-				update_user_meta( $member_id, 'fitpress_membership_date', $membership_date );
+				update_user_meta( $member_id, 'fitpress_membership_date', strtotime( $membership_date ) );
+			else :
+				date( 'j F Y', $membership_date );
 			endif;
 
 			$day = date( 'j', strtotime( $term, strtotime( $membership_date ) ) );

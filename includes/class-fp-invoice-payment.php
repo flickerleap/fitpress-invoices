@@ -41,11 +41,11 @@ class FP_Payment {
 
 		$membership = FP_Membership::get_user_membership( $member_id );
 
-		if ( 'active' != $membership_status && 'Once Off' != $membership['term'] && ! isset( $wp->query_vars['checkout'] ) ) :
+		if ( is_user_logged_in() && 'active' != $membership_status && 'Once Off' != $membership['term'] && ! isset( $wp->query_vars['checkout'] ) ) :
 			fp_add_flash_message( __( 'Please, make payment to activate your membership again.', 'fitpress' ), 'error' );
 			wp_redirect( fp_checkout_url() );
 			exit;
-		elseif ( 'active' == $membership_status && ! apply_filters( 'fitpress_payment_token', true ) ) :
+		elseif ( is_user_logged_in() && 'active' == $membership_status && ! apply_filters( 'fitpress_payment_token', true ) ) :
 			fp_add_flash_message( __( 'Please, <a href="' . fp_checkout_url() . '">add your payment method</a>. You will not be billed now.', 'fitpress' ), 'error' );
 		endif;
 	}

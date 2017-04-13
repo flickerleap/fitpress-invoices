@@ -151,7 +151,7 @@ class FP_Payment {
 
 		$membership = FP_Membership::get_user_membership( $member_id );
 
-		update_user_meta( $member_id, 'fitpress_credits', $credits['credits'], $old_credits);
+		update_user_meta( $member_id, 'fitpress_credits', $membership['credits'], $old_credits);
 
 	}
 

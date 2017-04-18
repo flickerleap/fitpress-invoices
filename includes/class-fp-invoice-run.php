@@ -313,16 +313,16 @@ class FP_Invoice_Run {
 				date( 'j F Y', $membership_date );
 			endif;
 
-			$day = date( 'j', strtotime( $term, strtotime( $membership_date ) ) );
+			$day = date( 'j', strtotime( $term, $membership_date ) );
 
-			if ( $day < date( 'j', strtotime( $membership_date ) ) ) :
-				$day = date( 'j', strtotime( $membership_date ) ) - $day;
+			if ( $day < date( 'j', $membership_date ) ) :
+				$day = date( 'j', $membership_date ) - $day;
 				$month--;
 			endif;
 
 		endif;
 
-		$next_invoice_date = strtotime( $day . '-' . $month . '-' . $year );
+		$next_invoice_date = strtotime( $year . '-' . $month . '-' . $day );
 
 		update_user_meta( $member_id, 'fitpress_next_invoice_date', $next_invoice_date );
 

@@ -30,11 +30,17 @@ class FP_Invoices_Admin {
 		add_action( 'fitpress_before_membership_profile_save', array( $this, 'save_membership_profile_data' ) );
 
 
-		//Setting up columns.
+		//Setting up post columns.
 		add_filter( 'manage_fp_invoice_posts_columns', array( $this, 'column_header' ), 10, 1);
 		add_action( 'manage_posts_custom_column', array( $this, 'column_data' ), 15, 3);
 		add_filter( 'manage_edit-fp_invoice_sortable_columns', array( $this, 'column_sortable' ) );
 		add_action( 'pre_get_posts', array( $this, 'sort_by_member') );
+
+		//Setting up user columns.
+		add_filter( 'manage_users_columns', array( $this, 'user_column_header' ), 10, 1 );
+		add_action( 'manage_users_custom_column', array( $this, 'user_column_data' ), 15, 3 );
+		add_filter( 'manage_users_sortable_columns', array( $this, 'user_column_sortable' ) );
+		add_action( 'pre_get_users', array( $this, 'sort_by_user_data' ) );
 
 		add_action( 'admin_init', array( $this, 'init_settings' ), 0, 40 );
 
@@ -193,6 +199,57 @@ class FP_Invoices_Admin {
 			$query->set( 'orderby', 'status' );
 
 		}
+
+	}
+
+	public function user_column_header( $column ){
+		$column['next_invoice_date'] = __( 'Renewal date', 'fitpress-invoices' );
+
+		return $column;
+	}
+
+	public function user_column_data( $value, $column_name, $user_id ) {
+
+		if ( 'next_invoice_date' == $column_name ) :
+
+			$next_invoice_date = get_user_meta( $user_id, 'fitpress_next_invoice_date', true );
+
+			if ( 'Once Off' == $next_invoice_date ) :
+
+				return 'Once Off';
+
+			elseif ( $next_invoice_date ) :
+
+				return date( 'j F Y', $next_invoice_date );
+
+			else :
+
+				return 'N/A';
+
+			endif;
+
+		endif;
+
+		return $value;
+
+	}
+
+	public function sort_by_user_data( $query ) {
+
+		if ( 'next_invoice_date' == $query->get( 'orderby' ) ) {
+
+			$query->set( 'orderby', 'meta_value' );
+			$query->set( 'meta_key', 'fitpress_next_invoice_date' );
+
+		}
+
+	}
+
+	public function user_column_sortable( $columns ) {
+
+		$columns['next_invoice_date'] = 'next_invoice_date';
+
+		return $columns;
 
 	}
 

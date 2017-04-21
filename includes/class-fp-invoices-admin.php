@@ -26,9 +26,10 @@ class FP_Invoices_Admin {
 	 */
 	public function __construct(){
 
-		add_action( 'fitpress_after_membership_profile_fields', array( $this, 'add_membership_profile_fields' ), 10, 2 );
-		add_action( 'fitpress_before_membership_profile_save', array( $this, 'save_membership_profile_data' ) );
+		add_action( 'fitpress_after_membership_fields', array( $this, 'add_membership_fields' ), 10, 2 );
+		add_action( 'fitpress_after_membership_save', array( $this, 'save_membership_data' ) );
 
+		add_action( 'fitpress_after_membership_actions', array( $this, 'add_action_fields' ) );
 
 		//Setting up post columns.
 		add_filter( 'manage_fp_invoice_posts_columns', array( $this, 'column_header' ), 10, 1);
@@ -46,86 +47,82 @@ class FP_Invoices_Admin {
 
 	}
 
-	public function add_membership_profile_fields( $member_id, $membership_id ){
+	public function add_membership_fields( $membership_id, $member_id ){
 
 		?>
 
-		<tr>
-		<th><label for="credits">Send Prorated Invoice Now?</label></th>
-		<td>
-			<input type="hidden" name="send_prorated_invoice" id="send_prorated_invoice"  class="regular-text" value="0" />
-			<input type="checkbox" name="send_prorated_invoice" id="send_prorated_invoice"  class="regular-check" value="1" /><br />
-			<span class="description">Only applies for upgrades and new memberships</span>
-		</td>
-		</tr>
-
-		<tr>
-		<th><label for="credits">Do not invoice?</label></th>
-		<td>
-			<input type="hidden" name="do_not_invoice" id="do_not_invoice"  class="regular-text" value="0" />
-			<input type="checkbox" name="do_not_invoice" id="do_not_invoice"  class="regular-check" value="1" /><br />
-			<span class="description">Will not send invoice</span>
-		</td>
-		</tr>
-
-		<?php if ( $membership_id && $membership_id =! '0' ):?>
-		<tr>
-		<th>Next Invoice Date</th>
-		<td>
-			<?php $next_invoice_date = get_user_meta( $member_id, 'fitpress_next_invoice_date', true );?>
-			<?php
-			if ( $next_invoice_date && 'Once Off' == $next_invoice_date ) :
-				echo 'Once Off';
-			elseif ( $next_invoice_date ) :?>
-				<input type="text" name="next_invoice_date" id="next_invoice_date" class="regular-text" value="<?php echo date( 'j F Y', $next_invoice_date );?>" />
-				<?php
-			else :
-				echo 'Not set.';
-			endif;
-			?>
-		</td>
-		</tr>
+		<?php if ( $membership_id ) :?>
+			<p>
+				<label for="renewal_date">Renewal Date</label>
+				<?php $renewal_date = get_post_meta( $membership_id, '_fp_renewal_date', true );?>
+				<?php if ( $renewal_date && 'N/A' == $renewal_date ) :?>
+					<input type="text" name="renewal_date" id="renewal_date" value="N/A" />
+				<?php elseif ( $renewal_date ) :?>
+					<input type="text" name="renewal_date" id="renewal_date" value="<?php echo date( 'j F Y', $renewal_date );?>" />
+				<?php endif;?>
+			</p>
 		<?php endif;?>
 
 		<?php
 
 	}
 
-	public function save_membership_profile_data( $member_data ){
+	public function save_membership_data( $membership_data ){
 
 		$send_prorated_invoice = ( isset( $_POST['send_prorated_invoice'] ) ) ? $_POST['send_prorated_invoice'] : 0;
-		$do_not_invoice = ( isset( $_POST['do_not_invoice'] ) ) ? $_POST['do_not_invoice'] : 0;
+		$do_invoice = ( isset( $_POST['do_invoice'] ) ) ? $_POST['do_invoice'] : 0;
 
-		$membership_id = ( isset( $_POST['membership_id'] ) ) ? $_POST['membership_id'] : 0;
 		$membership_status = ( isset( $_POST['membership_status'] ) ) ? $_POST['membership_status'] : 'on-hold';
-		$old_membership_id = ( $member_data['old_membership_id'] ) ? $member_data['old_membership_id'] : 0;
-		$member_id = $member_data['member_id'];
-		$next_invoice_date = ( isset( $_POST['next_invoice_date'] ) ) ? $_POST['next_invoice_date'] : date( 'j F Y' );
+		$old_package_id = ( $membership_data['old_package_id'] ) ? $membership_data['old_package_id'] : 0;
+		$package_id = ( $membership_data['package_id'] ) ? $membership_data['package_id'] : 0;
+		$membership_id = $membership_data['membership_id'];
+		$renewal_date = ( isset( $_POST['renewal_date'] ) ) ? $_POST['renewal_date'] : false;
+		$membership_start_date = get_post_meta( $membership_id, '_fp_membership_start_date', true );
+		$membership_start_date = ( $membership_start_date ) ? $membership_start_date : strtotime( 'midnight today' );
 
-		update_user_meta( $member_id, 'fitpress_next_invoice_date', strtotime( $next_invoice_date ) );
-
-		if ( $old_membership_id == $membership_id || 0 === intval( $membership_id ) || $membership_status != 'active' ) :
-			return;
+		if ( $renewal_date && $old_package_id == $package_id ) :
+			$renewal_date = strtotime( $renewal_date );
+		elseif (  $old_package_id != $membership_id ) :
+			$package_data = FP_Membership::get_membership( $package_id );
+			if ( 'Once Off' == $package_data[ $package_id ]['term'] ) :
+				$renewal_date = 'N/A';
+			else :
+				$renewal_date = strtotime( $package_data[ $package_id ]['term'], $membership_start_date );
+			endif;
 		endif;
+
+		update_post_meta( $membership_id, '_fp_renewal_date', $renewal_date );
 
 		$invoice = new FP_Invoice_Run();
 
-		if ( $do_not_invoice ) :
-			$this->set_membership_date( $member_id );
-			$membership = FP_Membership::get_membership( $membership_id );
-			$invoice->set_next_invoice_date( $member_id, $membership[$membership_id]['term'] );
+		if ( $do_invoice ) :
+
+			$invoice->create_invoice( $membership_id, $package_id, $old_package_id, $send_prorated_invoice );
 			return;
+
 		endif;
 
-		$invoice->create_invoice( $member_id, $membership_id, $old_membership_id, $send_prorated_invoice );
+		$package = FP_Membership::get_membership( $package_id );
+		$invoice->set_dates( $membership_id, $package[ $package_id ] );
 
-		$this->set_membership_date( $member_id );
+	}
+
+	public function add_action_fields( ){
+
+		?>
+		
+		<p>
+			<label for="do_invoice">Send Invoice?</label>
+			<input type="checkbox" name="do_invoice" value="1" />
+		</p>
+
+		<?php
 
 	}
 
 	public function set_membership_date( $member_id ) {
 
-		update_user_meta( $member_id, 'fitpress_membership_date', date( 'j F Y' ) );
+		update_post_meta( $membership_id, '_fp_membership_start_date', date( 'j F Y' ) );
 
 	}
 
@@ -203,28 +200,26 @@ class FP_Invoices_Admin {
 	}
 
 	public function user_column_header( $column ){
-		$column['next_invoice_date'] = __( 'Renewal date', 'fitpress-invoices' );
+		$column['renewal_date'] = __( 'Renewal date', 'fitpress-invoices' );
 
 		return $column;
 	}
 
 	public function user_column_data( $value, $column_name, $user_id ) {
 
-		if ( 'next_invoice_date' == $column_name ) :
+		if ( 'renewal_date' == $column_name ) :
+			
+			$membership = FP_Membership::get_user_membership( $user_id );
 
-			$next_invoice_date = get_user_meta( $user_id, 'fitpress_next_invoice_date', true );
+			$renewal_date = get_post_meta( $membership['membership_id'], '_fp_renewal_date', true );
 
-			if ( 'Once Off' == $next_invoice_date ) :
+			if ( $renewal_date && 'Once Off' != $renewal_date && 'N/A' != $renewal_date ) :
 
-				return 'Once Off';
-
-			elseif ( $next_invoice_date ) :
-
-				return date( 'j F Y', $next_invoice_date );
+				return date( 'j F Y', $renewal_date );
 
 			else :
 
-				return 'N/A';
+				return '';
 
 			endif;
 
@@ -236,7 +231,7 @@ class FP_Invoices_Admin {
 
 	public function sort_by_user_data( $query ) {
 
-		if ( 'next_invoice_date' == $query->get( 'orderby' ) ) {
+		if ( 'renewal_date' == $query->get( 'orderby' ) ) {
 
 			$query->set( 'orderby', 'meta_value' );
 			$query->set( 'meta_key', 'fitpress_next_invoice_date' );
@@ -246,8 +241,6 @@ class FP_Invoices_Admin {
 	}
 
 	public function user_column_sortable( $columns ) {
-
-		$columns['next_invoice_date'] = 'next_invoice_date';
 
 		return $columns;
 

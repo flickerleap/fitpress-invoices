@@ -144,56 +144,56 @@ class FP_Invoice_Run {
 
 	}
 
-	public function create_invoice( $member_id, $membership_id, $old_membership_id = null, $prorate = false ){
+	public function create_invoice( $membership_id, $package_id, $old_package_id = null, $prorate = false ) {
 
-		if( intval( $old_membership_id ) != 0 && $prorate ):
+		if ( 0 !== intval( $old_package_id ) && $prorate ) :
 
-			$memberships = FP_Membership::get_membership( array( $membership_id, $old_membership_id ) );
+			$memberships = FP_Membership::get_membership( array( $package_id, $old_package_id ) );
 
-			$old_price = $memberships[$old_membership_id]['price'];
-			$new_price = $memberships[$membership_id]['price'];
+			$old_price = $memberships[ $old_package_id ]['price'];
+			$new_price = $memberships[ $package_id ]['price'];
 
-			$this->set_next_invoice_date( $member_id, $memberships[$membership_id]['term'] );
+			$this->set_dates( $membership_id, $memberships[ $package_id ] );
 
-			if( $new_price > $old_price ):
+			if ( $new_price > $old_price ) :
 
-				$memberships[$membership_id]['price'] = $this->prorate_price( $new_price - $old_price );
+				$memberships[ $package_id ]['price'] = $this->prorate_price( $new_price - $old_price );
 
-			else:
+			else :
 
 				return;
 
 			endif;
 
-			$line_items[] = $memberships[ $membership_id ];
+			$line_items[] = $memberships[ $package_id ];
 
-			$invoice_id = $this->create_invoice_post( $line_items, $member_id, $prorate );
+			$invoice_id = $this->create_invoice_post( $line_items, $membership_id, $prorate );
 
 			$this->send_invoice( $invoice_id );
 
 		elseif ( $prorate ) :
 
-			$memberships = FP_Membership::get_membership( array( $membership_id ) );
+			$memberships = FP_Membership::get_membership( array( $package_id ) );
 
-			$memberships[$membership_id]['price'] = $this->prorate_price( $memberships[$membership_id]['price'] );
+			$memberships[ $package_id ]['price'] = $this->prorate_price( $memberships[ $package_id ]['price'] );
 
-			$this->set_next_invoice_date( $member_id, $memberships[$membership_id]['term'] );
+			$this->set_dates( $membership_id, $memberships[ $package_id ] );
 
-			$line_items[] = $memberships[$membership_id];
+			$line_items[] = $memberships[ $package_id ];
 
-			$invoice_id = $this->create_invoice_post( $line_items, $member_id, $prorate );
+			$invoice_id = $this->create_invoice_post( $line_items, $membership_id, $prorate );
 
 			$this->send_invoice( $invoice_id );
 
 		else :
 
-			$memberships = FP_Membership::get_membership( array( $membership_id ) );
+			$memberships = FP_Membership::get_membership( array( $package_id ) );
 
-			$this->set_next_invoice_date( $member_id, $memberships[$membership_id]['term'] );
+			$this->set_dates( $membership_id, $memberships[ $package_id ] );
 
-			$line_items[] = $memberships[$membership_id];
+			$line_items[] = $memberships[ $package_id ];
 
-			$invoice_id = $this->create_invoice_post( $line_items, $member_id, $prorate );
+			$invoice_id = $this->create_invoice_post( $line_items, $membership_id, $prorate );
 
 			$this->send_invoice( $invoice_id );
 
@@ -201,7 +201,7 @@ class FP_Invoice_Run {
 
 	}
 
-	public function send_invoice( $invoice_id, $prorate = false ){
+	public function send_invoice( $invoice_id, $prorate = false ) {
 
 		$invoice = get_post( $invoice_id );
 		$line_items = get_post_meta( $invoice_id, 'fp_invoice_line_items', true );
@@ -211,8 +211,9 @@ class FP_Invoice_Run {
 			'date' => get_post_meta( $invoice_id, 'fp_invoice_date', true ),
 			'due_date' => get_post_meta( $invoice_id, 'fp_invoice_due_date',  true ),
 		);
-		$member_id = get_post_meta( $invoice_id, 'fp_user_id', true );
-		$member = get_user_by('id', $member_id);
+		$membership_id = get_post_meta( $invoice_id, 'fp_membership_id', true );
+		$member_id = get_post_meta( $membership_id, '_fp_user_id', true );
+		$member = get_user_by( 'id', $member_id );
 
 		$FP_Email = new FP_Email( array( 'template' => 'email/invoice.php' ) );
 
@@ -231,7 +232,7 @@ class FP_Invoice_Run {
 
 	}
 
-	public function create_invoice_post( $line_items, $member_id, $prorate ){
+	public function create_invoice_post( $line_items, $membership_id, $prorate ){
 
 		$invoice_number = get_option( 'fitpress_invoice_number', 0 );
 
@@ -264,28 +265,29 @@ class FP_Invoice_Run {
 		update_post_meta( $new_post_id, 'fp_invoice_number', $invoice_number );
 		update_post_meta( $new_post_id, 'fp_invoice_date', date( 'Y/m/d' ) );
 		update_post_meta( $new_post_id, 'fp_invoice_due_date', $due_date );
-		update_post_meta( $new_post_id, 'fp_user_id', $member_id );
+		update_post_meta( $new_post_id, 'fp_membership_id', $membership_id );
 
 		return $new_post_id;
 
 	}
 
-	public function set_next_invoice_date( $member_id, $term = null ) {
+	public function set_dates( $membership_id, $package = null ) {
 
-		if ( $term == 'Once Off' ) :
+		if ( $package && 'Once Off' == $package['term'] ) :
 
-			update_user_meta( $member_id, 'fitpress_next_invoice_date', $term );
+			update_post_meta( $membership_id, '_fp_renewal_date', 'N/A' );
+			update_post_meta( $membership_id, '_fp_expiration_date', strtotime( $package['expiration_date'] ) );
 
 			return;
 
-		endif;		
+		endif;
 
-		$month = date( 'n', strtotime( $term ) );
-		$year = date( 'Y', strtotime( $term ) );
+		$month = date( 'n', strtotime( $package['term'] ) );
+		$year = date( 'Y', strtotime( $package['term'] ) );
 
 		if ( $this->is_synchronise_date() ) :
 
-			if( date( 'j' ) < $this->get_synchronise_date() && $term == '+1 month' ) :
+			if ( date( 'j' ) < $this->get_synchronise_date() && '+1 month' == $package['term'] ) :
 
 				$day = $this->get_synchronise_date();
 				$month = date( 'n' );
@@ -293,7 +295,7 @@ class FP_Invoice_Run {
 
 			else :
 
-				$day = date( 'j', strtotime( $term, strtotime( date( $this->get_synchronise_date() . ' F Y' ) ) ) );
+				$day = date( 'j', strtotime( $package['term'], strtotime( date( $this->get_synchronise_date() . ' F Y' ) ) ) );
 
 				if ( $day < $this->get_synchronise_date() ) :
 					$day = $this->get_synchronise_date() - $day;
@@ -304,16 +306,14 @@ class FP_Invoice_Run {
 
 		else :
 
-			$membership_date = get_user_meta( $member_id, 'fitpress_membership_date', true );
+			$membership_date = get_post_meta( $membership_id, '_fp_membership_start_date', true );
 
 			if ( ! $membership_date ) :
-				$membership_date = date( 'j F Y' );
-				update_user_meta( $member_id, 'fitpress_membership_date', strtotime( $membership_date ) );
-			else :
-				date( 'j F Y', $membership_date );
+				$membership_date = strtotime( 'today midnight' );
+				update_post_meta( $membership_id, '_fp_membership_start_date', $membership_date );
 			endif;
 
-			$day = date( 'j', strtotime( $term, $membership_date ) );
+			$day = date( 'j', strtotime( $package['term'], $membership_date ) );
 
 			if ( $day < date( 'j', $membership_date ) ) :
 				$day = date( 'j', $membership_date ) - $day;
@@ -322,9 +322,10 @@ class FP_Invoice_Run {
 
 		endif;
 
-		$next_invoice_date = strtotime( $year . '-' . $month . '-' . $day );
+		$renewal_date = strtotime( $year . '-' . $month . '-' . $day );
 
-		update_user_meta( $member_id, 'fitpress_next_invoice_date', $next_invoice_date );
+		update_user_meta( $membership_id, '_fp_renewal_date', $renewal_date );
+		update_user_meta( $membership_id, '_fp_expiration_date', 'N/A' );
 
 	}
 

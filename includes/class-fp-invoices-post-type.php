@@ -34,8 +34,8 @@ class FP_Invoices_Post_Type {
             add_action( 'load-post-new.php', array( $this, 'init_metabox' ) );
         }
 
-        add_action( 'fitpress_after_membership_fields', array( $this, 'add_membership_fields' ) );
-        add_filter( 'fitpress_before_membership_save', array( $this, 'save_membership_data' ) );
+        add_action( 'fitpress_after_package_fields', array( $this, 'add_membership_fields' ) );
+        add_filter( 'fitpress_before_package_save', array( $this, 'save_membership_data' ) );
 
     }
 

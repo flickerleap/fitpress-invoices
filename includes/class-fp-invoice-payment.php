@@ -99,12 +99,12 @@ class FP_Payment {
 
 	}
 
-	public function find_invoice( $member_id ) {
+	public function find_invoice( $membership_id ) {
 
 		$args = array(
 			'post_type' => 'fp_invoice',
-			'meta_key' => 'fp_user_id',
-			'meta_value' => $member_id,
+			'meta_key' => 'fp_membership_id',
+			'meta_value' => $membership_id,
 			'post_status' => 'fp-unpaid',
 		);
 
@@ -120,7 +120,7 @@ class FP_Payment {
 
 	public function process_payment( $status, $payment_data ) {
 
-		$invoice_id = $this->find_invoice( $payment_data['member_id'] );
+		$invoice_id = $this->find_invoice( $payment_data['membership_id'] );
 
 		if ( ! $invoice_id ) :
 			die( 'No unpaid invoice.' );
@@ -131,27 +131,19 @@ class FP_Payment {
 		switch ( $status ) :
 			case 'complete':
 				$this->update_invoice( $invoice_id );
-				$this->activate_membership( $payment_data['member_id'] );
-				$this->update_credits( $payment_data['member_id'] );
+				$this->activate_membership( $payment_data['membership_id'] );
+				$this->update_credits( $payment_data['membership_id'] );
 				break;
 			case 'failed':
+				$this->suspend_membership( $payment_data['membership_id'] );
+				break;
 			case 'pending':
-				$this->suspend_membership( $payment_data['member_id'] );
+				$this->pending_membership( $payment_data['membership_id'] );
 				break;
 			case 'cancelled':
-				$this->cancel_membership( $payment_data['member_id'] );
+				$this->cancel_membership( $payment_data['membership_id'] );
 				break;
 		endswitch;
-
-	}
-
-	public function update_credits( $member_id ) {
-
-		$old_credits = get_user_meta( $member_id, 'fitpress_credits', true );
-
-		$membership = FP_Membership::get_user_membership( $member_id );
-
-		update_user_meta( $member_id, 'fitpress_credits', $membership['credits'], $old_credits);
 
 	}
 
@@ -166,27 +158,55 @@ class FP_Payment {
 
 	}
 
-	public function cancel_membership( $member_id ) {
+	public function update_credits( $membership_id ) {
 
-		$membership_status = new FP_Membership_Status( $member_id );
+		$old_credits = get_post_meta( $membership_id, '_fp_credits', true );
+
+		$member_id = get_post_meta( $membership_id, '_fp_user_id', true );
+
+		$membership = FP_Membership::get_user_membership( $member_id );
+
+		update_post_meta( $membership_id, '_fp_credits', $membership['credits'], $old_credits );
+
+	}
+
+	public function cancel_membership( $membership_id ) {
+
+		$membership_status = new FP_Membership_Status( $membership_id );
 
 		$membership_status->set_status( 'cancelled' );
 
 	}
 
-	public function suspend_membership( $member_id ) {
+	public function suspend_membership( $membership_id ) {
 
-		$membership_status = new FP_Membership_Status( $member_id );
+		$membership_status = new FP_Membership_Status( $membership_id );
 
 		$membership_status->set_status( 'suspended' );
 
 	}
 
-	public function activate_membership( $member_id ) {
+	public function pending_membership( $membership_id ) {
 
-		$membership_status = new FP_Membership_Status( $member_id );
+		$membership_status = new FP_Membership_Status( $membership_id );
+
+		$membership_status->set_status( 'on-hold' );
+
+	}
+
+	public function activate_membership( $membership_id ) {
+
+		$membership_status = new FP_Membership_Status( $membership_id );
 
 		$membership_status->set_status( 'active' );
+
+		$member_id = get_post_meta( $membership_id, '_fp_user_id', true );
+
+		$membership = FP_Membership::get_user_membership( $member_id );
+
+		if ( 'Once Off' != $membership['term']  ) :
+			update_post_meta( $membership_id, '_fp_expiration_date', 'N/A' );
+		endif;
 
 	}
 

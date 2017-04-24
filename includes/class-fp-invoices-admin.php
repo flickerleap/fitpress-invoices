@@ -146,16 +146,17 @@ class FP_Invoices_Admin {
 
 		if ( 'member' == $column_name ):
 
-			$member_id = get_post_meta( $invoice_id, 'fp_user_id', true );
-			$member = get_user_by( 'id', $member_id );
+			$membership_id = get_post_meta( $invoice_id, 'fp_membership_id', true );
+			$user_id = get_post_meta( $membership_id, '_fp_user_id', true );
+			$user = get_user_by( 'id', $user_id );
 
-			if(!$member):
+			if(!$user):
 
 				echo __( 'Could not find member information.', 'fitpress-invoices' );
 
 			else:
 
-				echo '<a href="' . get_edit_user_link( $member->ID ) . '">' . $member->display_name . '</a>';
+				echo '<a href="' . get_admin_url( null, 'post.php?post=' . $membership_id . '&action=edit' ) . '">' . $user->display_name . '</a>';
 
 			endif;
 

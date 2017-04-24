@@ -146,7 +146,7 @@ class FP_Invoice_Run {
 
 	public function create_invoice( $membership_id, $package_id, $old_package_id = null, $prorate = false ) {
 
-		if ( 0 !== intval( $old_package_id ) && $prorate ) :
+		if ( $old_package_id && $prorate ) :
 
 			$memberships = FP_Membership::get_membership( array( $package_id, $old_package_id ) );
 

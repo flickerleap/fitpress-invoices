@@ -164,13 +164,14 @@ class FP_Invoices_Post_Type {
             'date' => get_post_meta( $invoice_id, 'fp_invoice_date', true ),
             'due_date' => get_post_meta( $invoice_id, 'fp_invoice_due_date',  true ),
         );
-        $member_id = get_post_meta( $invoice_id, 'fp_user_id', true );
-        $member = get_user_by( 'id', $member_id );
+        $membership_id = get_post_meta( $invoice_id, 'fp_membership_id', true );
+        $user_id = get_post_meta( $membership_id, '_fp_user_id', true );
+        $user = get_user_by( 'id', $user_id );
 
         ?>
 
         <p>
-            <strong><?php echo $member->display_name;?></strong><br />
+            <strong><?php echo $user->display_name;?></strong><br />
             <strong>Invoice Number:</strong> <?php echo $invoice['number']; ?><br />
             <strong>Date:</strong> <?php echo $invoice['date']; ?><br />
             <strong>Due Date:</strong><?php echo $invoice['due_date']; ?>

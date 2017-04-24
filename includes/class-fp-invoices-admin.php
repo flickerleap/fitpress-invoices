@@ -76,12 +76,16 @@ class FP_Invoices_Admin {
 		$old_package_id = ( $membership_data['old_package_id'] ) ? $membership_data['old_package_id'] : 0;
 		$package_id = ( $membership_data['package_id'] ) ? $membership_data['package_id'] : 0;
 		$membership_id = $membership_data['membership_id'];
-		$renewal_date = ( isset( $_POST['renewal_date'] ) ) ? $_POST['renewal_date'] : false;
+		$renewal_date = isset( $_POST['renewal_date'] ) ? $_POST['renewal_date'] : '';
 		$membership_start_date = get_post_meta( $membership_id, '_fp_membership_start_date', true );
 		$membership_start_date = ( $membership_start_date ) ? $membership_start_date : strtotime( 'midnight today' );
 
 		if ( $renewal_date && $old_package_id == $package_id ) :
-			$renewal_date = strtotime( $renewal_date );
+			if ( empty( $renewal_date ) || $renewal_date == 'N/A' ) :
+				$renewal_date = 'N/A';
+			else :
+				$renewal_date = strtotime( $renewal_date );
+			endif;
 		elseif (  $old_package_id != $membership_id ) :
 			$package_data = FP_Membership::get_membership( $package_id );
 			if ( 'Once Off' == $package_data[ $package_id ]['term'] ) :

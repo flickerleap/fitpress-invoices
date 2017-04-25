@@ -55,10 +55,10 @@ class FP_Invoices_Admin {
 			<p>
 				<label for="renewal_date">Renewal Date</label>
 				<?php $renewal_date = get_post_meta( $membership_id, '_fp_renewal_date', true );?>
-				<?php if ( ! $renewal_date || empty( $renewal_date ) || 'N/A' == $renewal_date ) :?>
-					<input type="text" name="renewal_date" id="renewal_date" value="N/A" />
-				<?php else :?>
+				<?php if ( $renewal_date && 'N/A' == $renewal_date ) : ?>
 					<input type="text" name="renewal_date" id="renewal_date" value="<?php echo date( 'j F Y', $renewal_date );?>" />
+				<?php else :?>
+					<input type="text" name="renewal_date" id="renewal_date" value="N/A" />
 				<?php endif;?>
 			</p>
 		<?php endif;?>

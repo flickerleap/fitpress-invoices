@@ -102,7 +102,6 @@ class FP_Invoices_Admin {
 		if ( $do_invoice ) :
 
 			$invoice->create_invoice( $membership_id, $package_id, $old_package_id, $send_prorated_invoice );
-			return;
 
 			$package = FP_Membership::get_membership( $package_id );
 			$invoice->set_dates( $membership_id, $package[ $package_id ] );

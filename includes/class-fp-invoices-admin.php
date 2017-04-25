@@ -47,11 +47,11 @@ class FP_Invoices_Admin {
 
 	}
 
-	public function add_membership_fields( $package_id, $member_id ){
+	public function add_membership_fields( $membership_id, $member_id ){
 
 		?>
 
-		<?php if ( $package_id ) :?>
+		<?php if ( $membership_id ) :?>
 			<p>
 				<label for="renewal_date">Renewal Date</label>
 				<?php $renewal_date = get_post_meta( $membership_id, '_fp_renewal_date', true );?>

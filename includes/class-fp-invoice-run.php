@@ -41,6 +41,48 @@ class FP_Invoice_Run {
 
 		add_filter( 'fitpress_credit_reset_date', array( $this, 'sync_reset_credit' ) );
 
+		add_action( 'fitpress_expire_memberships', array( $this, 'maybe_expire_renewals' ) );
+
+	}
+
+	public function maybe_expire_renewals(){
+
+		$args = array(
+			'post_type' => 'fp_member',
+			'meta_query' => array(
+				'relation' => 'AND',
+				array(
+					'key' => '_fp_membership_status',
+					'value' => 'active',
+					'compare' => '=',
+				),
+				array(
+					'relation' => 'OR',
+					array(
+						'key' => '_fp_renewal_date',
+						'value' => array( strtotime( 'today midnight' ), strtotime( 'tomorrow midnight' ) ),
+						'compare' => 'BETWEEN',
+					),
+					array(
+						'key' => '_fp_renewal_date',
+						'value' => strtotime( 'today midnight' ),
+						'compare' => '=',
+					),
+				),
+			),
+			'posts_per_page' => '-1',
+		);
+
+		$memberships = new WP_Query( $args );
+
+		if ( $memberships->found_posts ) :
+			foreach ( $memberships->posts as $membership ) :
+				the_post();
+				$membership_id = $membership->ID;
+				update_post_meta( $membership_id, '_fp_membership_status', 'expired' );
+			endforeach;
+		endif;
+
 	}
 
 	/**

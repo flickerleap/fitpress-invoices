@@ -6,7 +6,7 @@
 Plugin Name: FitPress Invoices
 Plugin URI: http://fitpress.co.za
 Description: FitPress Invoices is a add-on for FitPress that allows the system to add pricing to memberships and send invoices automatically
-Version: 1.0
+Version: 1.0.0
 Author: Digital Leap
 Author URI: http://digitalleap.co.za/wordpress/
 License: GPLv2 or later
@@ -34,6 +34,11 @@ function is_fitpress_active(){
 add_action( 'admin_init', 'is_fitpress_active' );
 
 class FP_Invoice {
+
+	/**
+	 * @var string
+	 */
+	public $version = '1.0.0';
 
 	/* We only want a single instance of this class. */
 	private static $instance = null;

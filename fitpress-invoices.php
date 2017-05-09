@@ -72,6 +72,8 @@ class FP_Invoice {
 		include_once( 'includes/class-fp-invoice-run.php' );
 		include_once( 'includes/class-fp-invoice-payment.php' );
 
+		include_once( 'includes/notifications/class-fp-notifications-membership-renewal.php' );
+
 	}
 
 	public function init_hooks(){

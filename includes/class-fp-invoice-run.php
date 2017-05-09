@@ -30,18 +30,13 @@ class FP_Invoice_Run {
 	 */
 	public function __construct(){
 
-		if( !wp_get_schedule('send_monthly_invoices') ):
-			$start = strtotime( 'tomorrow' );
-			wp_schedule_event( $start, 'daily', 'send_monthly_invoices' );
-		endif;
-
-		add_action( 'send_monthly_invoices', array( $this, 'maybe_send_monthly_invoices' ) );
+		add_action( 'fitpress_daily_cron', array( $this, 'maybe_send_invoices' ) );
 
 		add_action( 'fitpress_member_signup', array( $this, 'create_invoice' ), 10, 2 );
 
 		add_filter( 'fitpress_credit_reset_date', array( $this, 'sync_reset_credit' ) );
 
-		add_action( 'fitpress_expire_memberships', array( $this, 'maybe_expire_renewals' ) );
+		add_action( 'fitpress_daily_cron', array( $this, 'maybe_expire_renewals' ), 2 );
 
 	}
 
@@ -60,12 +55,12 @@ class FP_Invoice_Run {
 					'relation' => 'OR',
 					array(
 						'key' => '_fp_renewal_date',
-						'value' => array( strtotime( 'today midnight' ), strtotime( 'tomorrow midnight' ) ),
+						'value' => array( strtotime( 'yesterday midnight' ), strtotime( 'today midnight' ) ),
 						'compare' => 'BETWEEN',
 					),
 					array(
 						'key' => '_fp_renewal_date',
-						'value' => strtotime( 'today midnight' ),
+						'value' => strtotime( 'yesterday midnight' ),
 						'compare' => '=',
 					),
 				),
@@ -79,7 +74,8 @@ class FP_Invoice_Run {
 			foreach ( $memberships->posts as $membership ) :
 				the_post();
 				$membership_id = $membership->ID;
-				update_post_meta( $membership_id, '_fp_membership_status', 'expired' );
+				update_post_meta( $membership_id, '_fp_membership_status', 'suspended' );
+				update_post_meta( $membership_id, '_fp_credits', '0' );
 			endforeach;
 		endif;
 
@@ -131,22 +127,20 @@ class FP_Invoice_Run {
 	* @version 1.0
 	* @since 0.1
 	*/
-	public function maybe_send_monthly_invoices( ) {
+	public function maybe_send_invoices( ) {
 
-		$members = $this->get_renewals( );
-
-		$memberships = FP_Membership::get_memberships( );
+		$memberships = $this->get_renewals( );
 
 		// Check for results.
-		if ( ! empty( $members ) ) :
+		if ( ! empty( $memberships ) ) :
 
-			$next_day = strtotime( 'tomorrow', current_time( 'timestamp' ) );
+			foreach ( $memberships as $membership ) :
 
-			foreach ( $members as $member_id ) :
+				$membership_id = $membership->ID;
 
-				$membership_id = get_user_meta( $member_id, 'fitpress_membership_id', true );
+				$package_id = get_user_meta( $membership_id, '_fp_package_id', true );
 
-				$this->create_invoice( $member_id, $membership_id );
+				$this->create_invoice( $membership_id, $package_id );
 
 			endforeach;
 
@@ -157,32 +151,38 @@ class FP_Invoice_Run {
 
 	/**
 	 * Get a list of active or non-active members. Can also search.
-	 *
-	 * @param Mixed $fields Fields to return. Defaults to ID.
-	 * @param Bool  $none_members Set to true to return none members.
-	 * @param Mixed $search Set to string to search for a specific member.
 	 */
-	public static function get_renewals( ) {
+	public static function get_renewals() {
 
 		$args = array(
+			'post_type' => 'fp_member',
 			'meta_query' => array(
+				'relation' => 'AND',
 				array(
-					'key' => 'fitpress_membership_status',
+					'key' => '_fp_membership_status',
 					'value' => 'active',
 					'compare' => '=',
 				),
 				array(
-					'key' => 'fitpress_next_invoice_date',
-					'value' => strtotime( date( 'j F Y' ) ),
-					'compare' => '=',
+					'relation' => 'OR',
+					array(
+						'key' => '_fp_renewal_date',
+						'value' => array( strtotime( 'today midnight' ), strtotime( 'tomorrow midnight' ) ),
+						'compare' => 'BETWEEN',
+					),
+					array(
+						'key' => '_fp_renewal_date',
+						'value' => strtotime( 'today midnight' ),
+						'compare' => '=',
+					),
 				),
 			),
-			'fields' => $fields,
+			'posts_per_page' => '-1',
 		);
 
-		$member_query = new WP_User_Query( $args );
+		$member_query = new WP_Query( $args );
 
-		return $member_query->get_results();
+		return $member_query->posts;
 
 	}
 

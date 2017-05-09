@@ -18,7 +18,7 @@ function fp_invoice_maybe_manual_run(){
 	elseif ( isset( $_GET['force_send_renewal_reminder'] ) ) :
 		include_once( FPI_PLUGIN_DIR . 'includes/notifications/class-fp-notifications-membership-renewal.php' );
 		$membership_notification = new FP_Membership_Renewal_Notification();
-		add_action( 'init', array( $membership_notification, 'send_daily_notifications' ) );
+		$membership_notification->send_daily_notifications;
     endif;
 }
 add_action( 'template_redirect', 'fp_invoice_maybe_manual_run');

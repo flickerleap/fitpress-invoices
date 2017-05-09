@@ -15,6 +15,10 @@ function fp_invoice_maybe_manual_run(){
         FP_Invoice::maybe_send_monthly_invoices( true );
         $url = remove_query_arg( array( 'force_send_invoices' ) );
         wp_redirect( $url );
+	elseif ( isset( $_GET['force_send_renewal_reminder'] ) ) :
+		include_once( FPI_PLUGIN_DIR . 'includes/notifications/class-fp-notifications-membership-renewal.php' );
+		$membership_notification = new FP_Membership_Renewal_Notification();
+		add_filter( 'init', array( $membership_notification, 'membership_renewal_reminder' ) );
     endif;
 }
 add_action( 'template_redirect', 'fp_invoice_maybe_manual_run');

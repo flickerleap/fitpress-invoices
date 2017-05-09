@@ -57,10 +57,26 @@ class FP_Invoice {
 	 */
 	public function __construct(){
 
+		$this->define_constants();
 		$this->includes();
 		$this->init_hooks();
 
 		do_action( 'fitpress_loaded' );
+
+	}
+
+	/**
+	 * Define FP Constants
+	 */
+	private function define_constants() {
+
+		$upload_dir = wp_upload_dir();
+
+		$this->define( 'FPI_PLUGIN_FILE', __FILE__ );
+		$this->define( 'FPI_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+		$this->define( 'FPI_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+		$this->define( 'FPI_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+		$this->define( 'FPI_VERSION', $this->version );
 
 	}
 

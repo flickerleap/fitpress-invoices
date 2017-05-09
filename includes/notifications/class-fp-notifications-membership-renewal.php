@@ -74,7 +74,7 @@ class FP_Membership_Renewal_Notification {
 				$message = '';
 
 				$message .= '<p>Hi ' . $user->first_name . ',</p>';
-				$message .= '<p>This is just a reminder that your ' . $package_name . ' membership will renew on ' . $renewal_date . '. Please make any changes to your account before that date.</p>';
+				$message .= '<p>This is just a reminder that your ' . $package_name . ' membership will renew on ' . date( 'j F Y', $renewal_date ) . '. Please make any changes to your account before that date.</p>';
 
 				$notifications[] = array(
 					'template' => 'email/notification.php',

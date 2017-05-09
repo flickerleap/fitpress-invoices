@@ -80,6 +80,17 @@ class FP_Invoice {
 
 	}
 
+	/**
+	 * Define constant if not already set
+	 * @param  string $name
+	 * @param  string|bool $value
+	 */
+	private function define( $name, $value ) {
+		if ( ! defined( $name ) ) {
+			define( $name, $value );
+		}
+	}
+
 	public function includes(){
 
 		include_once( 'includes/fp-invoices-utilities.php' );

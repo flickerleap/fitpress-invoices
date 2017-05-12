@@ -127,7 +127,7 @@ class FP_Invoice_Run {
 	* @version 1.0
 	* @since 0.1
 	*/
-	public function maybe_send_invoices( ) {
+	public function maybe_send_invoices() {
 
 		$memberships = $this->get_renewals( );
 
@@ -138,7 +138,7 @@ class FP_Invoice_Run {
 
 				$membership_id = $membership->ID;
 
-				$package_id = get_user_meta( $membership_id, '_fp_package_id', true );
+				$package_id = get_post_meta( $membership_id, '_fp_package_id', true );
 
 				$this->create_invoice( $membership_id, $package_id );
 
@@ -167,7 +167,7 @@ class FP_Invoice_Run {
 					'relation' => 'OR',
 					array(
 						'key' => '_fp_renewal_date',
-						'value' => array( strtotime( 'today midnight' ), strtotime( 'tomorrow midnight' ) ),
+						'value' => array( strtotime( 'today midnight' ), strtotime( 'tomorrow midnight' ) - 1 ),
 						'compare' => 'BETWEEN',
 					),
 					array(
@@ -274,7 +274,7 @@ class FP_Invoice_Run {
 
 	}
 
-	public function create_invoice_post( $line_items, $membership_id, $prorate ){
+	public function create_invoice_post( $line_items, $membership_id, $prorate ) {
 
 		$invoice_number = get_option( 'fitpress_invoice_number', 0 );
 
@@ -282,16 +282,16 @@ class FP_Invoice_Run {
 
 		update_option( 'fitpress_invoice_number', $new_invoice_number );
 
-		$invoice_number = str_pad( $new_invoice_number, 9, 'INV000000', STR_PAD_LEFT);
+		$invoice_number = str_pad( $new_invoice_number, 9, 'INV000000', STR_PAD_LEFT );
 
 		$due_date = date( 'Y/m/d' );
 
 		if ( $this->is_synchronise_date() && $prorate ) :
 			$title = date( 'F' ) . '\'s Prorated Invoice #' . $invoice_number;
-		elseif ( $this->is_synchronise_date() ):
-			$title = date( 'F', strtotime( '+1 month') ) . '\'s Invoice #' . $invoice_number;
-			$due_date = date('Y/m/d',  strtotime( '1' . date( 'F Y', strtotime('+1 month') ) ) );
-		else:
+		elseif ( $this->is_synchronise_date() ) :
+			$title = date( 'F', strtotime( '+1 month' ) ) . '\'s Invoice #' . $invoice_number;
+			$due_date = date( 'Y/m/d',  strtotime( '1' . date( 'F Y', strtotime( '+1 month' ) ) ) );
+		else :
 			$title = 'Invoice #' . $invoice_number;
 		endif;
 
@@ -366,8 +366,8 @@ class FP_Invoice_Run {
 
 		$renewal_date = strtotime( $year . '-' . $month . '-' . $day );
 
-		update_user_meta( $membership_id, '_fp_renewal_date', $renewal_date );
-		update_user_meta( $membership_id, '_fp_expiration_date', 'N/A' );
+		update_post_meta( $membership_id, '_fp_renewal_date', $renewal_date );
+		update_post_meta( $membership_id, '_fp_expiration_date', 'N/A' );
 
 	}
 

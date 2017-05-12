@@ -44,7 +44,7 @@ class FP_Membership_Renewal_Notification {
 					'relation' => 'OR',
 					array(
 						'key' => '_fp_renewal_date',
-						'value' => array( strtotime( '+3 days midnight' ), strtotime( '+4 days midnight' ) ),
+						'value' => array( strtotime( '+3 days midnight' ), strtotime( '+4 days midnight' ) - 1 ),
 						'compare' => 'BETWEEN',
 					),
 					array(

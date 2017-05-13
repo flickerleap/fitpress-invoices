@@ -55,7 +55,7 @@ class FP_Invoice_Run {
 					'relation' => 'OR',
 					array(
 						'key' => '_fp_renewal_date',
-						'value' => array( strtotime( 'yesterday midnight' ), strtotime( 'today midnight' ) ),
+						'value' => array( strtotime( 'yesterday midnight' ), strtotime( 'today midnight' ) - 1 ),
 						'compare' => 'BETWEEN',
 					),
 					array(

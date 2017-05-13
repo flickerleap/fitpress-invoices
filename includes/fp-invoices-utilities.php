@@ -12,7 +12,8 @@
 
 function fp_invoice_maybe_manual_run(){
     if( isset( $_GET['force_send_invoices'] ) ):
-        FP_Invoice::maybe_send_invoices( true );
+    	$invoice_run = new FP_Invoice_Run();
+        $invoice_run->maybe_send_invoices( true );
         $url = remove_query_arg( array( 'force_send_invoices' ) );
         wp_redirect( $url );
 	elseif ( isset( $_GET['force_send_renewal_reminder'] ) ) :

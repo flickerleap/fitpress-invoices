@@ -20,6 +20,8 @@ function fp_invoice_maybe_manual_run(){
 		include_once( FPI_PLUGIN_DIR . 'includes/notifications/class-fp-notifications-membership-renewal.php' );
 		$notification = new FP_Notification();
 		$notification->send_daily_notifications();
+        $url = remove_query_arg( array( 'force_send_renewal_reminder' ) );
+        wp_redirect( $url );
     endif;
 }
 add_action( 'template_redirect', 'fp_invoice_maybe_manual_run');
